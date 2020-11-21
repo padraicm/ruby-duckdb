@@ -7,7 +7,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        ruby: ['2.5.8', '2.6.6', '2.7.2', 'head']
+        ruby: ['2.5.8']
 
     steps:
     - uses: actions/checkout@v2
@@ -20,10 +20,20 @@ jobs:
     - name: Install duckdb
       run: |
         git clone -b v0.2.2 https://github.com/cwida/duckdb.git duckdb-tmp-v0.2.2
-        cd duckdb-tmp-v0.2.2 && make && cd ..
+        cd duckdb-tmp-v0.2.2
+        cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_GENERATOR_PLATFORM=x64 -DJDBC_DRIVER=1 -DBUILD_ICU_EXTENSION=1 -DBUILD_PARQUET_EXTENSION=1 -DBUILD_TPCH_EXTENSION=1 -DDISABLE_UNITY=1
+        cmake --build . --target duckdb --config Release
+        ls -l src/Release
+        cd ..
     - name: Build and test with Rake with Ruby ${{ matrix.ruby }}
       run: |
+        ls -l duckdb-tmp-v0.2.2/src/Release
+        ls -l duckdb-tmp-v0.2.2/src/include
+        mkdir duckdb
+        cp duckdb-tmp-v0.2.2/src/Release/* duckdb
+        cp duckdb-tmp-v0.2.2/src/include/duckdb.h duckdb
+        cp duckdb/duckdb.lib duckdb/libduckdb.a
+        ls -l duckdb
         ruby -v
         bundle install
         bundle exec rake -- --with-duckdb-include=./duckdb --with-duckdb-lib=./duckdb
-
